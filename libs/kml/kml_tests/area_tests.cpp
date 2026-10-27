@@ -255,21 +255,20 @@ UNIT_TEST(Area_GeoJsonMixedHeightsSurviveNativeStorage)
   }
 }
 
-UNIT_TEST(Area_GeoJsonDiscardedClosingHeightDoesNotMark2dArea)
+UNIT_TEST(Area_GeoJsonAcceptsMatchingClosingHeights)
 {
-  kml::FileData data;
-  // Tolerate inconsistent closure as before, but do not retain the removed vertex's height flag.
-  kml::GeoJsonReader(data).Deserialize(R"({"type":"Polygon","coordinates":[[[0,0],[2,0],[0,2],[0,0,7]]]})");
-  TEST_EQUAL(data.m_areasData.size(), 1, ());
-  auto const & area = data.m_areasData.front();
-  TEST(!area.m_altitudeIsWgs84, ());
-  TEST(area.m_polygons.front().m_outer == Ring({{0, 0}, {2, 0}, {0, 2}}), ());
+  for (std::string const & ring : {R"([[0,0,10],[4,0,10],[0,4,10],[0,0,10]])", R"([[0,0],[4,0],[0,4],[0,0]])"})
+  {
+    kml::FileData data;
+    kml::GeoJsonReader(data).Deserialize(R"({"type":"Polygon","coordinates":[)" + ring + "]}");
+    TEST_EQUAL(data.m_areasData.size(), 1, (ring));
+    TEST_EQUAL(data.m_areasData.front().m_polygons.size(), 1, (ring));
 
-  std::string native;
-  MemWriter nativeWriter(native);
-  kml::KmlWriter(nativeWriter).Write(data);
-  TEST_EQUAL(ReadKml(native).m_areasData, data.m_areasData, (native));
-  TEST_EQUAL(native.find("mwm:altitudeIsWgs84"), std::string::npos, (native));
+    std::string native;
+    MemWriter nativeWriter(native);
+    kml::KmlWriter(nativeWriter).Write(data);
+    TEST_EQUAL(ReadKml(native).m_areasData, data.m_areasData, (native));
+  }
 }
 
 UNIT_TEST(Area_GeoJsonPolygonRootsAndInvalidRing)
@@ -309,6 +308,31 @@ UNIT_TEST(Area_GeoJsonExtraCoordinatesAndNumericTimestamp)
   TEST_EQUAL(area.m_timestamp, kml::TimestampClock::from_time_t(1700000000), ());
   TEST_EQUAL(area.m_polygons.front().m_outer.size(), 3, ());
   TEST_EQUAL(area.m_polygons.front().m_outer.front().m_altitude, std::optional<double>(10), ());
+}
+
+UNIT_TEST(Area_GeoJsonRejectsConflictingClosingHeights)
+{
+  std::string const shell = R"([[-1,-1],[5,-1],[5,5],[-1,5],[-1,-1]])";
+  for (std::string const & ring :
+       {R"([[0,0,10],[4,0,10],[0,4,10],[0,0,20]])", R"([[0,0],[4,0],[0,4],[0,0,0]])", R"([[0,0,0],[4,0],[0,4],[0,0]])"})
+  {
+    for (std::string const & geometry : {R"({"type":"Polygon","coordinates":[)" + ring + "]}",
+                                         R"({"type":"Polygon","coordinates":[)" + shell + "," + ring + "]}",
+                                         R"({"type":"MultiPolygon","coordinates":[[)" + shell + "],[" + ring + "]]}"})
+    {
+      std::string const input = R"({"type":"FeatureCollection","features":[
+        {"type":"Feature","geometry":)" +
+                                geometry + R"(},
+        {"type":"Feature","properties":{"name":"Retained"},"geometry":{
+          "type":"Polygon","coordinates":[[[10,10],[12,10],[10,12],[10,10]]]}}
+      ]})";
+      kml::FileData data;
+      kml::GeoJsonReader(data).Deserialize(input);
+      TEST_EQUAL(data.m_areasData.size(), 1, (geometry));
+      TEST_EQUAL(kml::GetDefaultStr(data.m_areasData.front().m_name), "Retained", (geometry));
+      TEST_EQUAL(data.m_areasData.front().m_polygons.size(), 1, (geometry));
+    }
+  }
 }
 
 UNIT_TEST(Area_GeoJsonUmapStyleSurvivesNativeStorage)
@@ -606,15 +630,32 @@ UNIT_TEST(Area_KmlRejectsBrokenRingWithoutJoiningAcrossBadCoordinates)
   TEST_EQUAL(data.m_bookmarksData.size(), 1, ());
 }
 
-UNIT_TEST(Area_KmlClosingVertexAltitude)
+UNIT_TEST(Area_KmlRejectsConflictingClosingHeights)
 {
   for (std::string const coordinates : {"0,0,10 4,0,10 0,4,10 0,0,20", "0,0 4,0 0,4 0,0,0", "0,0,0 4,0 0,4 0,0"})
   {
     auto const data =
         ReadKml("<kml><Document><Placemark><Polygon><outerBoundaryIs><LinearRing><coordinates>" + coordinates +
                 "</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>"
+                "<Placemark><name>Retained</name><Polygon><outerBoundaryIs><LinearRing>"
+                "<coordinates>10,10 12,10 10,12 10,10</coordinates>"
+                "</LinearRing></outerBoundaryIs></Polygon></Placemark>"
                 "</Document></kml>");
     TEST_EQUAL(data.m_areasData.size(), 1, (coordinates));
+    TEST_EQUAL(kml::GetDefaultStr(data.m_areasData.front().m_name), "Retained", (coordinates));
+    TEST_EQUAL(data.m_areasData.front().m_polygons.size(), 1, (coordinates));
+  }
+}
+
+UNIT_TEST(Area_KmlAcceptsMatchingClosingHeights)
+{
+  for (std::string const coordinates : {"0,0,10 4,0,10 0,4,10 0,0,10", "0,0 4,0 0,4 0,0"})
+  {
+    auto const data =
+        ReadKml("<kml><Document><Placemark><Polygon><outerBoundaryIs><LinearRing><coordinates>" + coordinates +
+                "</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark></Document></kml>");
+    TEST_EQUAL(data.m_areasData.size(), 1, (coordinates));
+    TEST_EQUAL(data.m_areasData.front().m_polygons.size(), 1, (coordinates));
     TEST_EQUAL(data.m_areasData.front().m_polygons.front().m_outer.size(), 3, ());
     std::string output;
     MemWriter writer(output);

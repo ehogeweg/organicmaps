@@ -60,6 +60,7 @@ struct AreaData
 };
 
 // Removes consecutive exact duplicates and the closing vertex, and normalizes ring winding.
+// Conflicting closing heights are rejected rather than silently discarded.
 // Topology is validated in a continuous longitude frame; source coordinates and altitude are retained.
 // Independent polygons are allowed to overlap, as in KML MultiGeometry.
 bool NormalizeAreaGeometry(std::vector<AreaPolygon> & polygons);
