@@ -157,7 +157,7 @@ public class RoutingController
   private final RoutingLoadPointsListener mRoutingLoadPointsListener = success ->
   {
     if (success)
-      prepare(getStartPoint(), getEndPoint());
+      rebuildLastRoute();
   };
 
   public static RoutingController get()
@@ -317,7 +317,8 @@ public class RoutingController
     mHasContainerSavedState = true;
   }
 
-  private void build()
+  // Package-private so controller tests can observe build requests without loading JNI.
+  void build()
   {
     Framework.nativeRemoveRoute();
 
@@ -411,9 +412,10 @@ public class RoutingController
 
   public void rebuildLastRoute()
   {
-    setState(State.NONE);
+    mContainsCachedResult = false;
+    setState(State.PREPARE);
     setBuildState(BuildState.NONE);
-    prepare(getStartPoint(), getEndPoint());
+    startPlanning(getStartPoint(), getEndPoint());
   }
 
   public void prepare(@Nullable MapObject startPoint, @Nullable MapObject endPoint)
@@ -431,7 +433,12 @@ public class RoutingController
 
   public void prepare(final @Nullable MapObject startPoint, final @Nullable MapObject endPoint, Router routerType)
   {
-    cancel();
+    if (!cancel())
+    {
+      // An idle controller can still have a saved-route read or write pending.
+      Framework.nativeRemoveRoutePoints();
+      Framework.nativeDeleteSavedRoutePoints();
+    }
     setState(State.PREPARE);
 
     mLastRouterType = routerType;

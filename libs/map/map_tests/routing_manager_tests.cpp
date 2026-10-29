@@ -63,14 +63,10 @@ bool LoadRoutePoints(RoutingManager & routingManager, TestGuiThread & guiThread)
 {
   bool loaded = false;
   bool completed = false;
-  // Failures may call back from the file thread, so always finish on the test GUI thread.
   routingManager.LoadRoutePoints([&](bool success)
   {
-    GetPlatform().RunTask(Platform::Thread::Gui, [&, success]
-    {
-      loaded = success;
-      completed = true;
-    });
+    loaded = success;
+    completed = true;
   });
   while (!completed)
     guiThread.RunNext();
@@ -174,7 +170,7 @@ void TestSavedRouteOrder(bool myPositionStart, size_t passedStops, bool hasCurre
     if (restoreMyPosition && hasCurrentPosition)
     {
       expected.front().m_position = currentPosition;
-      expected.front().m_title.clear();
+      expected.front().m_title = "My Position";
       expected.front().m_subTitle.clear();
     }
 
@@ -986,5 +982,99 @@ UNIT_TEST(RoutingManager_RebuildClearsUnavailableAlternatives)
   while (!recovered)
     guiThread->RunNext();
   TEST(session.SwapActiveAlternative(1), ("Fresh alternatives must become selectable."));
+}
+UNIT_TEST(RoutingManager_NewRouteOrCancellationSupersedesPendingRestore)
+{
+  for (bool cancelNewRoute : {false, true})
+  {
+    WithSavedRoute([cancelNewRoute](RoutingManager & manager, BookmarkManager &, TestGuiThread & guiThread)
+    {
+      manager.AddRoutePoint(MakeRoutePoint(RouteMarkType::Start, 0, 1), false);
+      manager.AddRoutePoint(MakeRoutePoint(RouteMarkType::Finish, 0, 2), false);
+      manager.SaveRoutePoints();
+      WaitForFileThread();
+      manager.RemoveRoutePoints();
+
+      bool completed = false;
+      bool loaded = true;
+      manager.LoadRoutePoints([&](bool success)
+      {
+        loaded = success;
+        completed = true;
+      });
+      // prepare() clears recovery points even when the Java controller was idle.
+      manager.RemoveRoutePoints();
+      manager.DeleteSavedRoutePoints();
+      manager.AddRoutePoint(MakeRoutePoint(RouteMarkType::Start, 0, 3), false);
+      manager.AddRoutePoint(MakeRoutePoint(RouteMarkType::Finish, 0, 4), false);
+      if (cancelNewRoute)
+        manager.CloseRouting(true);
+      while (!completed)
+        guiThread.RunNext();
+      TEST(!loaded, (cancelNewRoute));
+      auto const points = manager.GetRoutePoints();
+      TEST_EQUAL(points.size(), cancelNewRoute ? 0 : 2, ());
+      if (!cancelNewRoute)
+        TEST_EQUAL(points.back().m_position, m2::PointD(4, 4), ());
+      WaitForFileThread();
+      TEST(!manager.HasSavedRoutePoints(), ());
+    });
+  }
+}
+
+UNIT_TEST(RoutingManager_RestoreCompletionRunsWithApplyingPoints)
+{
+  WithSavedRoute([](RoutingManager & manager, BookmarkManager &, TestGuiThread & guiThread)
+  {
+    manager.AddRoutePoint(MakeRoutePoint(RouteMarkType::Start, 0, 1), false);
+    manager.AddRoutePoint(MakeRoutePoint(RouteMarkType::Finish, 0, 2), false);
+    manager.SaveRoutePoints();
+    WaitForFileThread();
+    manager.RemoveRoutePoints();
+    bool completed = false;
+    manager.LoadRoutePoints([&](bool success)
+    {
+      TEST(success, ());
+      completed = true;
+    });
+    while (manager.GetRoutePointsCount() == 0)
+      guiThread.RunNext();
+    TEST(completed, ("A newer request must not run between applying points and completing restoration"));
+  });
+}
+
+UNIT_TEST(RoutingManager_DeletingRecoveryOrdersAfterAPendingSave)
+{
+  WithSavedRoute([](RoutingManager & manager, BookmarkManager &, TestGuiThread &)
+  {
+    manager.AddRoutePoint(MakeRoutePoint(RouteMarkType::Start, 0, 1), false);
+    manager.AddRoutePoint(MakeRoutePoint(RouteMarkType::Finish, 0, 2), false);
+    TEST(!manager.HasSavedRoutePoints(), ());
+    std::promise<void> release;
+    auto const ready = release.get_future().share();
+    GetPlatform().RunTask(Platform::Thread::File, [ready] { ready.wait(); });
+    manager.SaveRoutePoints();
+    manager.DeleteSavedRoutePoints();
+    release.set_value();
+    WaitForFileThread();
+    TEST(!manager.HasSavedRoutePoints(), ("A queued save must not resurrect discarded recovery data"));
+  });
+}
+
+UNIT_TEST(RoutingManager_MissingRecoveryCompletesOnGui)
+{
+  WithSavedRoute([](RoutingManager & manager, BookmarkManager &, TestGuiThread & guiThread)
+  {
+    bool completed = false;
+    manager.LoadRoutePoints([&](bool success)
+    {
+      TEST(!success, ());
+      // GetRoutePointsCount checks GUI thread affinity through BookmarkManager.
+      TEST_EQUAL(manager.GetRoutePointsCount(), 0, ());
+      completed = true;
+    });
+    while (!completed)
+      guiThread.RunNext();
+  });
 }
 }  // namespace routing_manager_tests

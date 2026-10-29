@@ -22,6 +22,7 @@
 #include "base/thread_checker.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -280,9 +281,9 @@ public:
 
   /// \returns true if there are route points saved in file and false otherwise.
   bool HasSavedRoutePoints() const;
-  /// \brief It loads road points from file and delete file after loading.
-  /// The result of the loading will be sent via SafeCallback.
-  using LoadRouteHandler = platform::SafeCallback<void(bool success)>;
+  /// Restores only into an empty, inactive itinerary that was not cleared while reading.
+  /// Consumes the saved file even when ignored; completes on the GUI thread together with applying the points.
+  using LoadRouteHandler = std::function<void(bool success)>;
   void LoadRoutePoints(LoadRouteHandler const & handler);
   /// \brief It saves route points to file.
   void SaveRoutePoints();
@@ -390,6 +391,7 @@ private:
     std::vector<RouteMarkData> m_routeMarks;
   };
   std::map<uint32_t, RoutePointsTransaction> m_routePointsTransactions;
+  uint64_t m_restoreGeneration = 0;
   std::chrono::steady_clock::time_point m_loadRoutePointsTimestamp;
   std::map<std::string, m2::PointF> m_transitSymbolSizes;
 

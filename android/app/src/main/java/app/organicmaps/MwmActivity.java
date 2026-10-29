@@ -231,8 +231,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
       restoreRoutingUI(MapButtonsController.LayoutMode.planning);
     else if (RoutingController.get().isNavigating())
       restoreRoutingUI(MapButtonsController.LayoutMode.navigation);
-    else if (RoutingController.get().hasSavedRoute())
-      RoutingController.get().restoreRoute();
+
     if (mSearchPageViewModel.getSearchEnabled().getValue() == null && mSearchPageViewModel.isSearchPersistedActive())
     {
       mSearchPageViewModel.setSearchPageLastState(mSearchPageViewModel.getPersistedSheetState());
@@ -248,14 +247,24 @@ public class MwmActivity extends BaseMwmFragmentActivity
       saveAndStopTrackRecording();
     }
 
-    processIntent();
+    processStartupIntent();
     migrateOAuthCredentials();
+  }
+
+  void processStartupIntent()
+  {
+    processIntent();
+    // An explicit route takes precedence, including when its calculation failed.
+    final RoutingController routing = RoutingController.get();
+    if (!routing.isPlanning() && !routing.isNavigating() && routing.hasSavedRoute())
+      routing.restoreRoute();
   }
 
   /**
    * Process intents AFTER rendering is initialized.
    */
-  private void processIntent()
+  // Package-private so startup-order tests can supply an incoming request without creating a renderer.
+  void processIntent()
   {
     if (!Map.isEngineCreated())
       throw new AssertionError("Must be called with initialized Drape");

@@ -1010,10 +1010,7 @@ void RoutingManager::CloseRouting(bool removeRoutePoints)
   RemoveRoute(true /* deactivateFollowing */);
 
   if (removeRoutePoints)
-  {
-    m_bmManager->GetEditSession().ClearGroup(UserMark::Type::ROUTING);
-    CancelRecommendation(Recommendation::RebuildAfterPointsLoading);
-  }
+    RemoveRoutePoints();
 }
 
 void RoutingManager::SetLastUsedRouter(RouterType type)
@@ -1174,6 +1171,8 @@ void RoutingManager::RemoveRoutePoint(RouteMarkType type, size_t intermediateInd
 
 void RoutingManager::RemoveRoutePoints()
 {
+  ++m_restoreGeneration;
+  CancelRecommendation(Recommendation::RebuildAfterPointsLoading);
   ASSERT(m_bmManager != nullptr, ());
   RoutePointsLayout routePoints(*m_bmManager);
   routePoints.RemoveRoutePoints();
@@ -1617,8 +1616,8 @@ void RoutingManager::SetRouter(RouterType type)
   SetLastUsedRouter(type);
 
   // m_numMwmIDs is initialized in Init(), which runs on the GUI thread after async map loading
-  // completes (Framework::InitRouting). SetRouter() can be called earlier (e.g. route restoration
-  // triggers onRoutePointsLoaded → RoutingController.prepare → Router.set before maps finish loading).
+  // completes (Framework::InitRouting). An API/deep-link RoutingController.prepare() can call
+  // Router.set before maps finish loading.
   // Deferring is safe: Init() calls SetRouterImpl(GetLastUsedRouter()), picking up the type saved above.
   /// @TODO(AB): The proper fix is to not set mFrameworkInitialized=true in Android's OrganicMaps.java
   /// until the async native callback fires, so Java subsystems never see a half-initialized core.
@@ -1692,42 +1691,36 @@ bool RoutingManager::HasSavedRoutePoints() const
 
 void RoutingManager::LoadRoutePoints(LoadRouteHandler const & handler)
 {
-  GetPlatform().RunTask(Platform::Thread::File, [this, handler]()
+  CHECK_THREAD_CHECKER(m_threadChecker, ());
+  auto const generation = m_restoreGeneration;
+  GetPlatform().RunTask(Platform::Thread::File, [this, handler, generation]()
   {
-    if (!HasSavedRoutePoints())
+    std::vector<RouteMarkData> points;
+    if (HasSavedRoutePoints())
     {
-      if (handler)
-        handler(false /* success */);
-      return;
+      auto const fileName = GetPlatform().SettingsPathForFile(kRoutePointsFile);
+      SCOPE_GUARD(routePointsFileGuard, std::bind(&FileWriter::DeleteFileX, std::cref(fileName)));
+      try
+      {
+        std::string data;
+        ReaderPtr<Reader>(GetPlatform().GetReader(fileName)).ReadAsString(data);
+        points = DeserializeRoutePoints(data);
+      }
+      catch (RootException const & ex)
+      {
+        LOG(LWARNING, ("Loading route points failed:", ex.Msg()));
+      }
     }
 
-    // Delete file after loading.
-    auto const fileName = GetPlatform().SettingsPathForFile(kRoutePointsFile);
-    SCOPE_GUARD(routePointsFileGuard, std::bind(&FileWriter::DeleteFileX, std::cref(fileName)));
-
-    std::string data;
-    try
-    {
-      ReaderPtr<Reader>(GetPlatform().GetReader(fileName)).ReadAsString(data);
-    }
-    catch (RootException const & ex)
-    {
-      LOG(LWARNING, ("Loading road points failed:", ex.Msg()));
-      if (handler)
-        handler(false /* success */);
-      return;
-    }
-
-    auto points = DeserializeRoutePoints(data);
-    if (handler && points.empty())
-    {
-      handler(false /* success */);
-      return;
-    }
-
-    GetPlatform().RunTask(Platform::Thread::Gui, [this, handler, points = std::move(points)]() mutable
+    GetPlatform().RunTask(Platform::Thread::Gui, [this, handler, generation, points = std::move(points)]() mutable
     {
       ASSERT(m_bmManager != nullptr, ());
+      if (points.empty() || generation != m_restoreGeneration || IsRoutingActive() || GetRoutePointsCount() != 0)
+      {
+        if (handler)
+          handler(false /* success */);
+        return;
+      }
       // If we have found my position and the saved route used the user's position, we use my position as start point.
       bool routeUsedPosition = false;
       auto const & myPosMark = m_bmManager->MyPositionMark();
@@ -1745,6 +1738,7 @@ void RoutingManager::LoadRoutePoints(LoadRouteHandler const & handler)
           RouteMarkData startPt;
           startPt.m_pointType = RouteMarkType::Start;
           startPt.m_isMyPosition = true;
+          startPt.m_title = m_callbacks.m_stringsBundleGetter().GetString("core_my_position");
           startPt.m_position = myPosMark.GetPivot();
           AddRoutePoint(std::move(startPt), false /* optimize */);
         }
@@ -1829,13 +1823,12 @@ void RoutingManager::OnExtrapolatedLocationUpdate(location::GpsInfo const & info
 
 void RoutingManager::DeleteSavedRoutePoints()
 {
-  if (!HasSavedRoutePoints())
-    return;
-
+  // Queue deletion even when an earlier save has not created the file yet.
   GetPlatform().RunTask(Platform::Thread::File, []()
   {
     auto const fileName = GetPlatform().SettingsPathForFile(kRoutePointsFile);
-    FileWriter::DeleteFileX(fileName);
+    if (Platform::IsFileExistsByFullPath(fileName))
+      FileWriter::DeleteFileX(fileName);
   });
 }
 
