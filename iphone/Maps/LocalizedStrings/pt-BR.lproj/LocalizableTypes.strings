@@ -809,6 +809,9 @@
 "type.man_made.pier" = "Píer";
 "type.man_made.pipeline" = "Tubulação";
 "type.man_made.pipeline.overground" = "Pipeline aéreo";
+
+/* A covered water storage reservoir, usually for drinking water */
+"type.man_made.reservoir_covered" = "Reservatório coberto";
 "type.man_made.silo" = "Silo";
 "type.man_made.storage_tank" = "Tanque de armazenagem";
 "type.man_made.surveillance" = "Câmara de vigilância";
@@ -831,6 +834,9 @@
 "type.man_made.water_tower" = "Torre de água";
 "type.man_made.water_well" = "Poço de água";
 "type.man_made.water_well.drinking_water_no" = "Poço de água não potável";
+
+/* A facility that treats and supplies drinking water */
+"type.man_made.water_works" = "Estação de tratamento de água";
 "type.man_made.windmill" = "Moinho de vento";
 "type.man_made.works" = "Fábrica";
 
@@ -1464,6 +1470,7 @@
 "type.sport.rugby_union" = "Rugby";
 "type.sport.running" = "Corrida";
 "type.sport.softball" = "Softbol";
+"type.sport.pilates" = "Pilates";
 "type.tourism" = "Turismo";
 "type.tourism.aquarium" = "Aquário";
 
@@ -1614,6 +1621,9 @@
 "type.man_made.monitoring_station.weather" = "Estação de monitoramento meteorológico";
 "type.amenity.student_accommodation" = "Acomodação para estudantes";
 "type.craft.watchmaker" = "Relojoeiro";
+
+/* A workshop that makes and installs windows */
+"type.craft.window_construction" = "Fabricação de janelas";
 "type.xmas_feature.market" = "Mercado de Natal";
 "type.xmas_feature.tree" = "Árvore de Natal";
 "type.amenity.hookah_lounge" = "Lounge de narguilé";

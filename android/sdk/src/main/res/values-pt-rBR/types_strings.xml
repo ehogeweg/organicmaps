@@ -250,6 +250,8 @@
     <string name="type.man_made.survey_point">Marco geodésico</string>
     <string name="type.man_made.pipeline">Tubulação</string>
     <string name="type.man_made.pipeline.overground">Pipeline aéreo</string>
+    <!-- A covered water storage reservoir, usually for drinking water -->
+    <string name="type.man_made.reservoir_covered">Reservatório coberto</string>
     <string name="type.man_made.storage_tank">Tanque de armazenagem</string>
     <!-- A huge telecommunications tower. Often a local monument or a landmark. -->
     <string name="type.man_made.communications_tower">Torre de comunicação</string>
@@ -258,6 +260,8 @@
     <!-- A tower/mast constructed to burn off excess gas. -->
     <string name="type.man_made.flare">Flare</string>
     <string name="type.man_made.wastewater_plant">Estação de tratamento de esgoto</string>
+    <!-- A facility that treats and supplies drinking water -->
+    <string name="type.man_made.water_works">Estação de tratamento de água</string>
     <string name="type.mountain_pass">Passo de Montanha</string>
     <!-- A loose surface consisting of angular, sharp stones. Usually on a mountain slope and prone to landslides. -->
     <string name="type.natural.scree">Pedregulho pedregoso</string>
@@ -498,6 +502,7 @@
     <string name="type.sport.rugby_union">Rugby</string>
     <string name="type.sport.running">Corrida</string>
     <string name="type.sport.softball">Softbol</string>
+    <string name="type.sport.pilates">Pilates</string>
     <!-- Typically serviced, staff is present and food is available (compared to wilderness_hut). -->
     <string name="type.tourism.alpine_hut">Alojamento na montanha</string>
     <string name="type.tourism.apartment">Apartamento de temporada</string>
@@ -552,5 +557,7 @@
     <string name="type.man_made.monitoring_station.water_level">Estação de monitoramento do nível de água</string>
     <string name="type.man_made.monitoring_station.weather">Estação de monitoramento meteorológico</string>
     <string name="type.amenity.student_accommodation">Acomodação para estudantes</string>
+    <!-- A workshop that makes and installs windows -->
+    <string name="type.craft.window_construction">Fabricação de janelas</string>
     <string name="type.amenity.hookah_lounge">Lounge de narguilé</string>
 </resources>

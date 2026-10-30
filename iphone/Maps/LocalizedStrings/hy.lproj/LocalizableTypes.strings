@@ -809,6 +809,9 @@
 "type.man_made.pier" = "Պիրս";
 "type.man_made.pipeline" = "Խողովակաշար";
 "type.man_made.pipeline.overground" = "Վերգետնյա խողովակաշար";
+
+/* A covered water storage reservoir, usually for drinking water */
+"type.man_made.reservoir_covered" = "Ծածկված ջրամբար";
 "type.man_made.silo" = "Սիլոսային հոր";
 "type.man_made.storage_tank" = "Պահեստային բաք";
 "type.man_made.surveillance" = "Տեսախցիկ";
@@ -831,6 +834,9 @@
 "type.man_made.water_tower" = "Ջրաշտարակ";
 "type.man_made.water_well" = "Ջրհոր";
 "type.man_made.water_well.drinking_water_no" = "Ջրհոր";
+
+/* A facility that treats and supplies drinking water */
+"type.man_made.water_works" = "Ջրամաքրման կայան";
 "type.man_made.windmill" = "Հողմաղաց";
 "type.man_made.works" = "Գործարան";
 
@@ -1464,6 +1470,7 @@
 "type.sport.rugby_union" = "Ռեգբի-15";
 "type.sport.running" = "Վազք";
 "type.sport.softball" = "Սոֆթբոլ";
+"type.sport.pilates" = "Պիլատես";
 "type.tourism" = "Զբոսաշրջություն";
 "type.tourism.aquarium" = "Ակվարիում";
 
@@ -1614,6 +1621,9 @@
 "type.man_made.monitoring_station.weather" = "Եղանակի մոնիտորինգի կայան";
 "type.amenity.student_accommodation" = "Ուսանողական հանրակացարան";
 "type.craft.watchmaker" = "Ժամագործ";
+
+/* A workshop that makes and installs windows */
+"type.craft.window_construction" = "Պատուհանների արտադրություն";
 "type.xmas_feature.market" = "Սուրբ Ծննդյան տոնավաճառ";
 "type.xmas_feature.tree" = "Տոնածառ";
 "type.amenity.hookah_lounge" = "Նարգիլե բար";

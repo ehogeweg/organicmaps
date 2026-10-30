@@ -809,6 +809,9 @@
 "type.man_made.pier" = "Pier";
 "type.man_made.pipeline" = "Pypleiding";
 "type.man_made.pipeline.overground" = "Bogrondse pypleiding";
+
+/* A covered water storage reservoir, usually for drinking water */
+"type.man_made.reservoir_covered" = "Bedekte reservoir";
 "type.man_made.silo" = "Silo";
 "type.man_made.storage_tank" = "Opgaartenk";
 "type.man_made.surveillance" = "Bewakingskamera";
@@ -831,6 +834,9 @@
 "type.man_made.water_tower" = "Watertoring";
 "type.man_made.water_well" = "Waterput";
 "type.man_made.water_well.drinking_water_no" = "Waterput";
+
+/* A facility that treats and supplies drinking water */
+"type.man_made.water_works" = "Waterwerke";
 "type.man_made.windmill" = "Windmeule";
 "type.man_made.works" = "Fabriek";
 
@@ -1464,6 +1470,7 @@
 "type.sport.rugby_union" = "Rugbyunie";
 "type.sport.running" = "Hardloop";
 "type.sport.softball" = "Sagtebal";
+"type.sport.pilates" = "Pilates";
 "type.tourism" = "Toerisme";
 "type.tourism.aquarium" = "Aquarium";
 
@@ -1614,6 +1621,9 @@
 "type.man_made.monitoring_station.weather" = "Weather Monitoring Station";
 "type.amenity.student_accommodation" = "Student Accommodation";
 "type.craft.watchmaker" = "Watchmaker";
+
+/* A workshop that makes and installs windows */
+"type.craft.window_construction" = "Venstervervaardiging";
 "type.xmas_feature.market" = "Kersmark";
 "type.xmas_feature.tree" = "Kersboom";
 "type.amenity.hookah_lounge" = "Hookah Lounge";
